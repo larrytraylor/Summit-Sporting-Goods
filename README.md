@@ -10,11 +10,8 @@ encrypt everything in transit, keep the public guest Wi-Fi isolated from interna
 business systems, and survive a single cable failure at the warehouse.
 
 Ten test cases were defined up front and each one was run and evidenced against the
-built network.
-
-## Demo Walkthrough
-
-▶ **[Watch the walkthrough](ADD-LINK)**
+built network. Every test case below includes the screenshots that prove it — expand
+the **Evidence** section under each one.
 
 ---
 
@@ -100,23 +97,14 @@ Two ACLs enforce this: **STAFF-RESTRICT** on Core-MLS and **GUEST** on R2.
 
 ## Architecture
 
-*(Add the topology diagram and legend here. draw.io is free and committing the
-`.drawio` source alongside the exported PNG keeps it editable.)*
+![Summit Sporting Goods network topology](images/topology.png)
 
-```
-                          ┌─────────┐
-                          │   ISP   │──── SaaS host 209.165.200.226
-                          └────┬────┘
-              ┌────────────────┴────────────────┐
-              │      IPSec VPN tunnel           │
-         ┌────┴────┐                       ┌────┴────┐
-         │   R1    │                       │   R2    │
-         └────┬────┘                       └────┬────┘
-         ┌────┴─────┐                    ┌──────┴──────┐
-         │ Core-MLS │                    │ SW1 ═══ SW2 │  (redundant links)
-         └────┬─────┘                    └──────┬──────┘
-      VLAN 10 │ VLAN 20              VLAN 40    │ VLAN 30
-```
+![Network diagram legend](images/legend.png)
+
+The main office (Site 1) connects through R1 and Core-MLS, which routes between the
+Admin and Staff VLANs. The warehouse/storefront (Site 2) connects through R2 to two
+switches joined by redundant links: SW1 serves Warehouse-Ops and SW2 serves the guest
+access point. R1 and R2 reach each other across the ISP through an IPSec tunnel.
 
 ---
 
@@ -213,6 +201,28 @@ Trunk links: R2 → SW1 on Gig0/1, and SW1 → SW2 on Fa0/2 and Fa0/3.
 **Verified with** `show vlan brief` on all three switches and `show interfaces trunk`
 on SW1, confirming 802.1q encapsulation carrying VLANs 30 and 40.
 
+<details>
+<summary><b>Evidence — Test Case 7 (3 screenshots)</b></summary>
+
+**Devices involved in this test**
+
+![Test Case 7 segment](images/tc07-diagram.png)
+
+**1.** Core-MLS `show vlan brief` — Fa0/1–2 in VLAN 10, Fa0/3–4 in VLAN 20
+
+![Core-MLS show vlan brief — Fa0/1–2 in VLAN 10, Fa0/3–4 in VLAN 20](images/tc07-1.png)
+
+**2.** SW2 `show vlan brief` — Fa0/1 (AP link) in VLAN 30
+
+![SW2 show vlan brief — Fa0/1 (AP link) in VLAN 30](images/tc07-2.png)
+
+**3.** SW1 `show interfaces trunk` — Gig0/1, Fa0/2, Fa0/3 trunking 802.1q, carrying VLANs 30 and 40
+
+![SW1 show interfaces trunk — Gig0/1, Fa0/2, Fa0/3 trunking 802.1q, carrying VLANs 30 and 40](images/tc07-3.png)
+
+</details>
+
+
 ### Restricting staff access — Test Case 1
 
 `STAFF-RESTRICT` is applied to the Staff segment on Core-MLS. It blocks Staff from
@@ -236,6 +246,32 @@ other reason.
 > address, or a downed interface. The ACL hit counter is what turns a failed ping
 > into evidence that the policy worked.
 
+<details>
+<summary><b>Evidence — Test Case 1 (5 screenshots)</b></summary>
+
+**1.** Core-MLS `show running-config | begin Vlan20` — STAFF-RESTRICT applied to the Staff SVI
+
+![Core-MLS show running-config | begin Vlan20 — STAFF-RESTRICT applied to the Staff SVI](images/tc01-1.png)
+
+**2.** PC-Customer Service → SRV1 (10.10.10.10): 4 replies, 0% loss
+
+![PC-Customer Service → SRV1 (10.10.10.10): 4 replies, 0% loss](images/tc01-2.png)
+
+**3.** PC-Admin → PC-Ops1 (10.20.40.51): allowed
+
+![PC-Admin → PC-Ops1 (10.20.40.51): allowed](images/tc01-3.png)
+
+**4.** PC-Customer Service → PC-Ops1: Destination host unreachable
+
+![PC-Customer Service → PC-Ops1: Destination host unreachable](images/tc01-4.png)
+
+**5.** Core-MLS `show access-lists` — STAFF-RESTRICT deny entry shows 4 matches
+
+![Core-MLS show access-lists — STAFF-RESTRICT deny entry shows 4 matches](images/tc01-5.png)
+
+</details>
+
+
 ### Guest isolation — Test Case 2
 
 The `GUEST` ACL on R2's guest subinterface permits DHCP, denies 10.0.0.0/8, and
@@ -245,6 +281,32 @@ permits everything else. Guests reach the internet; they reach nothing internal.
 209.165.200.226, then a ping to SRV1 failing with a reply from the guest gateway at
 10.20.30.1 — the gateway itself rejecting the traffic.
 
+<details>
+<summary><b>Evidence — Test Case 2 (4 screenshots)</b></summary>
+
+**Devices involved in this test**
+
+![Test Case 2 segment](images/tc02-diagram.png)
+
+**1.** R2 — GUEST ACL applied inbound on the guest subinterface (Gig0/1.30)
+
+![R2 — GUEST ACL applied inbound on the guest subinterface (Gig0/1.30)](images/tc02-1.png)
+
+**2.** Tablet-Guest browser loads the SaaS host at 209.165.200.226
+
+![Tablet-Guest browser loads the SaaS host at 209.165.200.226](images/tc02-2.png)
+
+**3.** Tablet-Guest → SRV1 fails, rejected by the guest gateway 10.20.30.1
+
+![Tablet-Guest → SRV1 fails, rejected by the guest gateway 10.20.30.1](images/tc02-3.png)
+
+**4.** PC-Admin → SRV1 succeeds (control)
+
+![PC-Admin → SRV1 succeeds (control)](images/tc02-4.png)
+
+</details>
+
+
 ### Log-in banners — Test Case 3
 
 An acceptable use policy banner is configured on all five managed routers and
@@ -253,6 +315,24 @@ property and restricted to authorized use.
 
 **Verified with** `show running-config | begin banner`, then logging out and
 reconnecting to see the banner render above the login prompt.
+
+<details>
+<summary><b>Evidence — Test Case 3 (2 screenshots)</b></summary>
+
+**Devices involved in this test**
+
+![Test Case 3 segment](images/tc03-diagram.png)
+
+**1.** R1 `show running-config | begin banner` and the banner at login
+
+![R1 show running-config | begin banner and the banner at login](images/tc03-1.png)
+
+**2.** Banner displayed above the login prompt on Core-MLS
+
+![Banner displayed above the login prompt on Core-MLS](images/tc03-2.png)
+
+</details>
+
 
 ---
 
@@ -277,6 +357,32 @@ address to another device.
 > the DHCP server, the pool can still lease that address to another device and cause
 > a conflict. Both sides have to agree.
 
+<details>
+<summary><b>Evidence — Test Case 4 (4 screenshots)</b></summary>
+
+**Devices involved in this test**
+
+![Test Case 4 segment](images/tc04-diagram.png)
+
+**1.** PC-Marketing set to DHCP, leased from the 10.10.20.0/24 pool
+
+![PC-Marketing set to DHCP, leased from the 10.10.20.0/24 pool](images/tc04-1.png)
+
+**2.** Core-MLS `show ip dhcp binding` — leases issued to Main Office workstations
+
+![Core-MLS show ip dhcp binding — leases issued to Main Office workstations](images/tc04-2.png)
+
+**3.** SRV1 set statically to 10.10.10.10 / 255.255.255.0, gateway 10.10.10.1
+
+![SRV1 set statically to 10.10.10.10 / 255.255.255.0, gateway 10.10.10.1](images/tc04-3.png)
+
+**4.** Core-MLS `show running-config | begin dhcp` — `ip dhcp excluded-address 10.10.10.10`
+
+![Core-MLS show running-config | begin dhcp — ip dhcp excluded-address 10.10.10.10](images/tc04-4.png)
+
+</details>
+
+
 ---
 
 ## Layer 2 Redundancy
@@ -300,6 +406,24 @@ On SW2, Fa0/2 is the root port in `FWD` state and Fa0/3 is the alternate in `BLK
 **Verified with** `show spanning-tree vlan 40` on both switches — protocol reported
 as `rstp`, SW2 showing SW1's Root ID, and the port roles in the interface list.
 
+<details>
+<summary><b>Evidence — Test Case 5 (2 screenshots)</b></summary>
+
+**Devices involved in this test**
+
+![Test Case 5 segment](images/tc05-diagram.png)
+
+**1.** SW1 `show spanning-tree vlan 40` — rstp, SW1 is the root bridge
+
+![SW1 show spanning-tree vlan 40 — rstp, SW1 is the root bridge](images/tc05-1.png)
+
+**2.** SW2 `show spanning-tree vlan 40` — Fa0/2 root port (FWD), Fa0/3 alternate (BLK)
+
+![SW2 show spanning-tree vlan 40 — Fa0/2 root port (FWD), Fa0/3 alternate (BLK)](images/tc05-2.png)
+
+</details>
+
+
 ---
 
 ## Inter-Site Connectivity
@@ -314,6 +438,24 @@ then `show ip route ospf` on both edge routers:
 
 - R1 holds 10.20.40.0 and 10.20.30.0 with the `O` code
 - R2 holds 10.10.10.0 and 10.10.20.0 with the `O` code
+
+<details>
+<summary><b>Evidence — Test Case 8 (2 screenshots)</b></summary>
+
+**Devices involved in this test**
+
+![Test Case 8 segment](images/tc08-diagram.png)
+
+**1.** R1 `show ip ospf neighbor` — neighbors in FULL state
+
+![R1 show ip ospf neighbor — neighbors in FULL state](images/tc08-1.png)
+
+**2.** R2 `show ip route ospf` — 10.10.10.0 and 10.10.20.0 learned with the O code
+
+![R2 show ip route ospf — 10.10.10.0 and 10.10.20.0 learned with the O code](images/tc08-2.png)
+
+</details>
+
 
 ### IPSec site-to-site VPN — Test Case 9
 
@@ -333,6 +475,32 @@ outside interface.
 **Guest exclusion verified with** `show access-lists 110` — the crypto ACL matches
 office traffic to 10.20.40.0/24 and contains no entry for the guest subnet, so guest
 traffic never enters the tunnel.
+
+<details>
+<summary><b>Evidence — Test Case 9 (4 screenshots)</b></summary>
+
+**Devices involved in this test**
+
+![Test Case 9 segment](images/tc09-diagram.png)
+
+**1.** Before traffic — `show crypto isakmp sa` empty, `show crypto ipsec sa` counters at zero
+
+![Before traffic — show crypto isakmp sa empty, show crypto ipsec sa counters at zero](images/tc09-1.png)
+
+**2.** PC-Admin → PC-Ops1 triggers the tunnel; first packets time out, then replies succeed
+
+![PC-Admin → PC-Ops1 triggers the tunnel; first packets time out, then replies succeed](images/tc09-2.png)
+
+**3.** After — tunnel QM_IDLE / ACTIVE, packets encrypted and decrypted in both directions
+
+![After — tunnel QM_IDLE / ACTIVE, packets encrypted and decrypted in both directions](images/tc09-3.png)
+
+**4.** R1 `show access-lists 110` — crypto ACL matches office traffic only; no guest entry
+
+![R1 show access-lists 110 — crypto ACL matches office traffic only; no guest entry](images/tc09-4.png)
+
+</details>
+
 
 ---
 
@@ -363,6 +531,44 @@ Tablet-Guest to SRV1, confirming the deny counter incremented, then tracing the 
 packet in simulation mode and watching the PDU dropped at R2 with the access list
 named as the cause.
 
+<details>
+<summary><b>Evidence — Test Case 6 (7 screenshots)</b></summary>
+
+**Devices involved in this test**
+
+![Test Case 6 segment](images/tc06-diagram.png)
+
+**1.** SRV1 NTP service on, date and time set
+
+![SRV1 NTP service on, date and time set](images/tc06-1.png)
+
+**2.** R1 `show ntp status` — clock synced to SRV1 (10.10.10.10)
+
+![R1 show ntp status — clock synced to SRV1 (10.10.10.10)](images/tc06-2.png)
+
+**3.** R2 `show ntp status` — clock synced
+
+![R2 show ntp status — clock synced](images/tc06-3.png)
+
+**4.** SRV1 Syslog service on
+
+![SRV1 Syslog service on](images/tc06-4.png)
+
+**5.** Interface bounce on R2 arrives in SRV1 Syslog with a timestamp
+
+![Interface bounce on R2 arrives in SRV1 Syslog with a timestamp](images/tc06-5.png)
+
+**6.** R2 `show ip access-lists GUEST` — deny counter incremented after a denied guest ping
+
+![R2 show ip access-lists GUEST — deny counter incremented after a denied guest ping](images/tc06-6.png)
+
+**7.** Simulation mode — guest PDU to SRV1 dropped at R2, access list named as the cause
+
+![Simulation mode — guest PDU to SRV1 dropped at R2, access list named as the cause](images/tc06-7.png)
+
+</details>
+
+
 ### Port security — Test Case 10
 
 The Warehouse-Ops access ports on SW1 (Fa0/4 and Fa0/5, VLAN 40) are physically
@@ -376,6 +582,28 @@ same port, then generating traffic from it.
 `show port-security interface fa0/4` reported Port Status `Secure-shutdown` with the
 last source address matching Laptop-Rogue (00E0.F9C5.A8BB) — the violation logged
 with the offending MAC.
+
+<details>
+<summary><b>Evidence — Test Case 10 (3 screenshots)</b></summary>
+
+**Devices involved in this test**
+
+![Test Case 10 segment](images/tc10-diagram.png)
+
+**1.** SW1 port security — sticky MAC, maximum 1, shutdown on violation; authorized MACs learned
+
+![SW1 port security — sticky MAC, maximum 1, shutdown on violation; authorized MACs learned](images/tc10-1.png)
+
+**2.** Laptop-Rogue connected to SW1 Fa0/4 in place of PC-Ops1
+
+![Laptop-Rogue connected to SW1 Fa0/4 in place of PC-Ops1](images/tc10-2.png)
+
+**3.** SW1 `show port-security interface fa0/4` — Secure-shutdown, last source MAC = Laptop-Rogue (00E0.F9C5.A8BB)
+
+![SW1 show port-security interface fa0/4 — Secure-shutdown, last source MAC = Laptop-Rogue (00E0.F9C5.A8BB)](images/tc10-3.png)
+
+</details>
+
 
 ---
 
@@ -488,7 +716,7 @@ result as complete.
 - ✅ Port security violation triggered and logged
 - ✅ NTP synced, Syslog receiving timestamped events
 - ✅ All ten test cases run and evidenced
-- ⬜ Topology diagram and legend added to the repo
+- ✅ Topology diagram, legend, and evidence screenshots added to the repo
 - ⬜ Video walkthrough recorded
 - ⬜ Device configurations exported to `/configs`
 - ⬜ Failover test — pull the active warehouse link and confirm STP converges
