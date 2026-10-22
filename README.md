@@ -2,16 +2,16 @@
 
 *OSPF · IPSec site-to-site VPN · VLANs & 802.1Q · Rapid-PVST · ACLs · DHCP · Port Security · Syslog & NTP*
 
-Hi — this is a two-site enterprise network built and validated from scratch for a
+A two-site enterprise network designed, built, and validated in Cisco Packet Tracer for a
 ten-person retailer opening a second location. The main office and the new
-warehouse/storefront exchange order, inventory, and customer data continuously over
-the public internet, so the network has to route between sites automatically,
-encrypt everything in transit, keep the public guest Wi-Fi isolated from internal
-business systems, and survive a single cable failure at the warehouse.
+warehouse/storefront share order, inventory, and customer data over the public
+internet, so the network had to route between sites automatically, encrypt all
+traffic between them, keep guest Wi-Fi isolated from internal systems, and keep
+running through a single cable failure at the warehouse.
 
-Ten test cases were defined up front and each one was run and evidenced against the
-built network. Every test case below includes the screenshots that prove it — expand
-the **Evidence** section under each one.
+Ten test cases were written before testing began, and each one was run against the
+finished network. Every test case includes the screenshots that prove its result —
+expand **Evidence** under any test case to see them.
 
 ---
 
@@ -23,16 +23,11 @@ the **Evidence** section under each one.
 4. [Architecture](#architecture)
 5. [Core Concepts](#core-concepts)
 6. [Test Coverage](#test-coverage)
-7. [Segmentation and Access Control](#segmentation-and-access-control)
-8. [Addressing Services](#addressing-services)
-9. [Layer 2 Redundancy](#layer-2-redundancy)
-10. [Inter-Site Connectivity](#inter-site-connectivity)
-11. [Security and Monitoring](#security-and-monitoring)
-12. [Problems Resolved](#problems-resolved)
-13. [Lessons Learned](#lessons-learned)
-14. [Tools & Technologies](#tools--technologies)
-15. [Project Status](#project-status)
-
+7. [Test Cases](#test-cases)
+8. [Problems Resolved](#problems-resolved)
+9. [Lessons Learned](#lessons-learned)
+10. [Tools & Technologies](#tools--technologies)
+11. [Project Status](#project-status)
 ---
 
 ## The Business Requirement
@@ -181,49 +176,13 @@ offending MAC.
 
 ---
 
-## Segmentation and Access Control
+## Test Cases
 
-### VLANs and 802.1Q trunking — Test Case 7
+Each test case lists what was configured, how it was verified, and the screenshots that prove the result.
 
-Access ports carry one VLAN untagged to the end device. Trunk ports carry multiple
-VLANs and tag each frame with its VLAN ID so the receiving switch knows where it
-belongs.
+### Test Case 1 — Device Discovery and Reachability
 
-| Device | Access ports | VLAN |
-| --- | --- | --- |
-| Core-MLS | Fa0/1, Fa0/2 | 10 Admin |
-| Core-MLS | Fa0/3, Fa0/4 | 20 Staff |
-| SW1 | Fa0/4, Fa0/5 | 40 Warehouse-Ops |
-| SW2 | Fa0/1 (AP link) | 30 Guest |
-
-Trunk links: R2 → SW1 on Gig0/1, and SW1 → SW2 on Fa0/2 and Fa0/3.
-
-**Verified with** `show vlan brief` on all three switches and `show interfaces trunk`
-on SW1, confirming 802.1q encapsulation carrying VLANs 30 and 40.
-
-<details>
-<summary><b>Evidence — Test Case 7 (3 screenshots)</b></summary>
-
-**Devices involved in this test**
-
-![Test Case 7 segment](images/tc07-diagram.png)
-
-**1.** Core-MLS `show vlan brief` — Fa0/1–2 in VLAN 10, Fa0/3–4 in VLAN 20
-
-![Core-MLS show vlan brief — Fa0/1–2 in VLAN 10, Fa0/3–4 in VLAN 20](images/tc07-1.png)
-
-**2.** SW2 `show vlan brief` — Fa0/1 (AP link) in VLAN 30
-
-![SW2 show vlan brief — Fa0/1 (AP link) in VLAN 30](images/tc07-2.png)
-
-**3.** SW1 `show interfaces trunk` — Gig0/1, Fa0/2, Fa0/3 trunking 802.1q, carrying VLANs 30 and 40
-
-![SW1 show interfaces trunk — Gig0/1, Fa0/2, Fa0/3 trunking 802.1q, carrying VLANs 30 and 40](images/tc07-3.png)
-
-</details>
-
-
-### Restricting staff access — Test Case 1
+*Area: Segmentation and access control*
 
 `STAFF-RESTRICT` is applied to the Staff segment on Core-MLS. It blocks Staff from
 reaching Warehouse-Ops while still permitting access to SRV1. PC-Admin sits on a
@@ -272,7 +231,9 @@ other reason.
 </details>
 
 
-### Guest isolation — Test Case 2
+### Test Case 2 — Guest Access ACL
+
+*Area: Segmentation and access control*
 
 The `GUEST` ACL on R2's guest subinterface permits DHCP, denies 10.0.0.0/8, and
 permits everything else. Guests reach the internet; they reach nothing internal.
@@ -307,7 +268,9 @@ permits everything else. Guests reach the internet; they reach nothing internal.
 </details>
 
 
-### Log-in banners — Test Case 3
+### Test Case 3 — Log-in Banners
+
+*Area: Security compliance*
 
 An acceptable use policy banner is configured on all five managed routers and
 switches, displayed before login, identifying the system as Summit Sporting Goods
@@ -334,11 +297,9 @@ reconnecting to see the banner render above the login prompt.
 </details>
 
 
----
+### Test Case 4 — DHCP and Static Reservation
 
-## Addressing Services
-
-### DHCP and static reservation — Test Case 4
+*Area: Addressing services*
 
 | Scope | DHCP server |
 | --- | --- |
@@ -383,11 +344,9 @@ address to another device.
 </details>
 
 
----
+### Test Case 5 — Layer 2 Redundancy and STP (802.1w)
 
-## Layer 2 Redundancy
-
-### Spanning Tree — Test Case 5
+*Area: Layer 2 redundancy*
 
 SW1 and SW2 are connected by two links, Fa0/2 and Fa0/3, so the warehouse survives a
 single cable or port failure. Rapid-PVST (802.1w) prevents the resulting loop from
@@ -424,93 +383,14 @@ as `rstp`, SW2 showing SW1's Root ID, and the port roles in the interface list.
 </details>
 
 
----
+### Test Case 6 — Edge Device Syslog and NTP
 
-## Inter-Site Connectivity
+*Area: Security and monitoring*
 
-### OSPF — Test Case 8
-
-R1, ISP, R2, and Core-MLS all run OSPF, so each site learns the other's networks
-without a single static route.
-
-**Verified with** `show ip ospf neighbor` on R1 showing neighbors in `FULL` state,
-then `show ip route ospf` on both edge routers:
-
-- R1 holds 10.20.40.0 and 10.20.30.0 with the `O` code
-- R2 holds 10.10.10.0 and 10.10.20.0 with the `O` code
-
-<details>
-<summary><b>Evidence — Test Case 8 (2 screenshots)</b></summary>
-
-**Devices involved in this test**
-
-![Test Case 8 segment](images/tc08-diagram.png)
-
-**1.** R1 `show ip ospf neighbor` — neighbors in FULL state
-
-![R1 show ip ospf neighbor — neighbors in FULL state](images/tc08-1.png)
-
-**2.** R2 `show ip route ospf` — 10.10.10.0 and 10.10.20.0 learned with the O code
-
-![R2 show ip route ospf — 10.10.10.0 and 10.10.20.0 learned with the O code](images/tc08-2.png)
-
-</details>
-
-
-### IPSec site-to-site VPN — Test Case 9
-
-A tunnel between R1 and R2 encrypts inter-site traffic across the internet, built
-from an ISAKMP policy, a pre-shared key, and a crypto map applied to each router's
-outside interface.
-
-**Tested in three stages:**
-
-1. **Before qualifying traffic** — `show crypto isakmp sa` returns an empty table and
-   `show crypto ipsec sa` shows zero counters. The tunnel has not been triggered.
-2. **Trigger** — ping from PC-Admin to PC-Ops1 at 10.20.40.51. The first packets
-   time out while the tunnel negotiates, then replies succeed.
-3. **After** — the tunnel to R2 at 198.51.100.1 appears in `QM_IDLE` / `ACTIVE`, and
-   the IPSec counters show packets encrypted and decrypted in both directions.
-
-**Guest exclusion verified with** `show access-lists 110` — the crypto ACL matches
-office traffic to 10.20.40.0/24 and contains no entry for the guest subnet, so guest
-traffic never enters the tunnel.
-
-<details>
-<summary><b>Evidence — Test Case 9 (4 screenshots)</b></summary>
-
-**Devices involved in this test**
-
-![Test Case 9 segment](images/tc09-diagram.png)
-
-**1.** Before traffic — `show crypto isakmp sa` empty, `show crypto ipsec sa` counters at zero
-
-![Before traffic — show crypto isakmp sa empty, show crypto ipsec sa counters at zero](images/tc09-1.png)
-
-**2.** PC-Admin → PC-Ops1 triggers the tunnel; first packets time out, then replies succeed
-
-![PC-Admin → PC-Ops1 triggers the tunnel; first packets time out, then replies succeed](images/tc09-2.png)
-
-**3.** After — tunnel QM_IDLE / ACTIVE, packets encrypted and decrypted in both directions
-
-![After — tunnel QM_IDLE / ACTIVE, packets encrypted and decrypted in both directions](images/tc09-3.png)
-
-**4.** R1 `show access-lists 110` — crypto ACL matches office traffic only; no guest entry
-
-![R1 show access-lists 110 — crypto ACL matches office traffic only; no guest entry](images/tc09-4.png)
-
-</details>
-
-
----
-
-## Security and Monitoring
-
-### Syslog and NTP — Test Case 6
-
-Every device syncs its clock from SRV1 and forwards logs there, configured with
-`logging 10.10.10.10` and `service timestamps log datetime msec` so each entry
-carries an accurate timestamp. Without synchronized clocks, correlating events across
+Network devices forward their logs to SRV1, configured with `logging 10.10.10.10`
+and `service timestamps log datetime msec` so each entry carries an accurate
+timestamp. R1 syncs its clock directly from SRV1 (10.10.10.10); R2 syncs through the
+ISP router (203.0.113.1). Without synchronized clocks, correlating events across
 devices is guesswork.
 
 **Verified with** `show ntp status` on R1 and R2 reporting a synced clock, then
@@ -569,7 +449,129 @@ named as the cause.
 </details>
 
 
-### Port security — Test Case 10
+### Test Case 7 — VLANs and 802.1Q Trunking
+
+*Area: Segmentation*
+
+Access ports carry one VLAN untagged to the end device. Trunk ports carry multiple
+VLANs and tag each frame with its VLAN ID so the receiving switch knows where it
+belongs.
+
+| Device | Access ports | VLAN |
+| --- | --- | --- |
+| Core-MLS | Fa0/1, Fa0/2 | 10 Admin |
+| Core-MLS | Fa0/3, Fa0/4 | 20 Staff |
+| SW1 | Fa0/4, Fa0/5 | 40 Warehouse-Ops |
+| SW2 | Fa0/1 (AP link) | 30 Guest |
+
+Trunk links: R2 → SW1 on Gig0/1, and SW1 → SW2 on Fa0/2 and Fa0/3.
+
+**Verified with** `show vlan brief` on all three switches and `show interfaces trunk`
+on SW1, confirming 802.1q encapsulation carrying VLANs 30 and 40.
+
+<details>
+<summary><b>Evidence — Test Case 7 (3 screenshots)</b></summary>
+
+**Devices involved in this test**
+
+![Test Case 7 segment](images/tc07-diagram.png)
+
+**1.** Core-MLS `show vlan brief` — Fa0/1–2 in VLAN 10, Fa0/3–4 in VLAN 20
+
+![Core-MLS show vlan brief — Fa0/1–2 in VLAN 10, Fa0/3–4 in VLAN 20](images/tc07-1.png)
+
+**2.** SW2 `show vlan brief` — Fa0/1 (AP link) in VLAN 30
+
+![SW2 show vlan brief — Fa0/1 (AP link) in VLAN 30](images/tc07-2.png)
+
+**3.** SW1 `show interfaces trunk` — Gig0/1, Fa0/2, Fa0/3 trunking 802.1q, carrying VLANs 30 and 40
+
+![SW1 show interfaces trunk — Gig0/1, Fa0/2, Fa0/3 trunking 802.1q, carrying VLANs 30 and 40](images/tc07-3.png)
+
+</details>
+
+
+### Test Case 8 — Dynamic Routing with OSPF (custom)
+
+*Area: Inter-site connectivity*
+
+R1, ISP, R2, and Core-MLS all run OSPF, so each site learns the other's networks
+without a single static route.
+
+**Verified with** `show ip ospf neighbor` on R1 showing neighbors in `FULL` state,
+then `show ip route ospf` on both edge routers:
+
+- R1 holds 10.20.40.0 and 10.20.30.0 with the `O` code
+- R2 holds 10.10.10.0 and 10.10.20.0 with the `O` code
+
+<details>
+<summary><b>Evidence — Test Case 8 (2 screenshots)</b></summary>
+
+**Devices involved in this test**
+
+![Test Case 8 segment](images/tc08-diagram.png)
+
+**1.** R1 `show ip ospf neighbor` — neighbors in FULL state
+
+![R1 show ip ospf neighbor — neighbors in FULL state](images/tc08-1.png)
+
+**2.** R2 `show ip route ospf` — 10.10.10.0 and 10.10.20.0 learned with the O code
+
+![R2 show ip route ospf — 10.10.10.0 and 10.10.20.0 learned with the O code](images/tc08-2.png)
+
+</details>
+
+
+### Test Case 9 — IPSec Site-to-Site VPN (custom)
+
+*Area: Inter-site connectivity*
+
+A tunnel between R1 and R2 encrypts inter-site traffic across the internet, built
+from an ISAKMP policy, a pre-shared key, and a crypto map applied to each router's
+outside interface.
+
+**Tested in three stages:**
+
+1. **Before qualifying traffic** — `show crypto isakmp sa` returns an empty table and
+   `show crypto ipsec sa` shows zero counters. The tunnel has not been triggered.
+2. **Trigger** — ping from PC-Admin to PC-Ops1 at 10.20.40.51. The first packets
+   time out while the tunnel negotiates, then replies succeed.
+3. **After** — the tunnel to R2 at 198.51.100.1 appears in `QM_IDLE` / `ACTIVE`, and
+   the IPSec counters show packets encrypted and decrypted in both directions.
+
+**Guest exclusion verified with** `show access-lists 110` — the crypto ACL matches
+office traffic to 10.20.40.0/24 and contains no entry for the guest subnet, so guest
+traffic never enters the tunnel.
+
+<details>
+<summary><b>Evidence — Test Case 9 (4 screenshots)</b></summary>
+
+**Devices involved in this test**
+
+![Test Case 9 segment](images/tc09-diagram.png)
+
+**1.** Before traffic — `show crypto isakmp sa` empty, `show crypto ipsec sa` counters at zero
+
+![Before traffic — show crypto isakmp sa empty, show crypto ipsec sa counters at zero](images/tc09-1.png)
+
+**2.** PC-Admin → PC-Ops1 triggers the tunnel; first packets time out, then replies succeed
+
+![PC-Admin → PC-Ops1 triggers the tunnel; first packets time out, then replies succeed](images/tc09-2.png)
+
+**3.** After — tunnel QM_IDLE / ACTIVE, packets encrypted and decrypted in both directions
+
+![After — tunnel QM_IDLE / ACTIVE, packets encrypted and decrypted in both directions](images/tc09-3.png)
+
+**4.** R1 `show access-lists 110` — crypto ACL matches office traffic only; no guest entry
+
+![R1 show access-lists 110 — crypto ACL matches office traffic only; no guest entry](images/tc09-4.png)
+
+</details>
+
+
+### Test Case 10 — Port Security (custom)
+
+*Area: Network security*
 
 The Warehouse-Ops access ports on SW1 (Fa0/4 and Fa0/5, VLAN 40) are physically
 reachable on a warehouse floor, so each is configured with sticky MAC learning, a
