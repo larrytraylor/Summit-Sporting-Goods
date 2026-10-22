@@ -1,4 +1,4 @@
-# Multi-Site Enterprise Network - Summit Sporting Goods
+# Summit Sporting Goods - Multi-Site Enterprise Network
 
 *OSPF · IPSec site-to-site VPN · VLANs & 802.1Q · Rapid-PVST · ACLs · DHCP · Port Security · Syslog & NTP*
 
